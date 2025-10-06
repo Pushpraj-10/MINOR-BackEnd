@@ -40,5 +40,3 @@ function cosineSimilarity(a, b) {
 }
 
 module.exports = FaceService;
-
-

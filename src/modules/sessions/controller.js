@@ -18,4 +18,22 @@ exports.checkin = async function (req, res) {
   }
 };
 
+exports.getProfessorSessions = async function (req, res) {
+  try {
+    const result = await service.getProfessorSessions(req.headers.authorization);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
+exports.getSessionAttendance = async function (req, res) {
+  try {
+    const result = await service.getSessionAttendance(req.params.sessionId, req.headers.authorization);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
 

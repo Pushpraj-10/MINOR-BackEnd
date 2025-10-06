@@ -58,6 +58,77 @@ class SessionsService {
     );
     return { ok: true, verified, attendance: { sessionId: result.sessionId, studentUid: result.studentUid, timestamp: result.timestamp, method: result.method } };
   }
+
+  static async getProfessorSessions(authorization) {
+    const decoded = authzProfessor(authorization);
+    
+    // Get all sessions created by this professor
+    const sessions = await Session.find({ professorUid: decoded.uid })
+      .sort({ createdAt: -1 })
+      .limit(50); // Limit to recent 50 sessions
+    
+    // For each session, get attendance statistics
+    const sessionsWithStats = await Promise.all(
+      sessions.map(async (session) => {
+        // Count total attendance records for this session
+        const totalAttendance = await Attendance.countDocuments({ sessionId: session.sessionId });
+        
+        // Count verified attendance (students who actually attended)
+        const attendedStudents = await Attendance.countDocuments({ 
+          sessionId: session.sessionId, 
+          verified: true 
+        });
+        
+        return {
+          session_id: session.sessionId,
+          title: session.title || 'Untitled Session',
+          start_time: session.createdAt,
+          end_time: session.expiresAt,
+          total_students: totalAttendance,
+          attended_students: attendedStudents
+        };
+      })
+    );
+    
+    return { sessions: sessionsWithStats };
+  }
+
+  static async getSessionAttendance(sessionId, authorization) {
+    const decoded = authzProfessor(authorization);
+    
+    // Verify the session belongs to this professor
+    const session = await Session.findOne({ 
+      sessionId, 
+      professorUid: decoded.uid 
+    });
+    
+    if (!session) {
+      throw new Error('Session not found or access denied');
+    }
+    
+    // Get all attendance records for this session
+    const attendanceRecords = await Attendance.find({ sessionId })
+      .sort({ timestamp: 1 });
+    
+    // Get student details for each attendance record
+    const studentsWithAttendance = await Promise.all(
+      attendanceRecords.map(async (record) => {
+        const user = await User.findOne({ uid: record.studentUid });
+        return {
+          student_id: record.studentUid,
+          name: user?.name || 'Unknown Student',
+          email: user?.email || 'unknown@email.com',
+          attendance_status: record.verified
+        };
+      })
+    );
+    
+    return {
+      session_id: sessionId,
+      session_title: session.title || 'Untitled Session',
+      students: studentsWithAttendance
+    };
+  }
 }
 
 function cosineSimilarity(a, b) {
