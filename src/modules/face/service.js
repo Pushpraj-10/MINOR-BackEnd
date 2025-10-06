@@ -19,7 +19,7 @@ class FaceService {
     const user = await User.findOne({ uid });
     if (!user || !user.face?.embedding) throw new Error('no stored embedding');
     const score = cosineSimilarity(embedding, user.face.embedding);
-    const t = parseFloat(threshold ?? process.env.FACE_THRESHOLD ?? '0.75');
+    const t = parseFloat(threshold ?? process.env.FACE_THRESHOLD ?? '0.3');
     const match = score >= t;
     return { match, score, threshold: t };
   }

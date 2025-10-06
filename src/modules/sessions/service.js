@@ -42,7 +42,7 @@ class SessionsService {
     if (embedding && Array.isArray(embedding) && Array.isArray(user.face?.embedding)) {
       method = 'face-embedding';
       const score = cosineSimilarity(embedding, user.face.embedding);
-      const threshold = parseFloat(process.env.FACE_THRESHOLD || '0.75');
+      const threshold = parseFloat(process.env.FACE_THRESHOLD || '0.3');
       verified = score >= threshold;
     }
 
