@@ -44,11 +44,14 @@ class SessionsService {
       const score = cosineSimilarity(embedding, user.face.embedding);
       const threshold = parseFloat(process.env.FACE_THRESHOLD || '0.3');
       verified = score >= threshold;
+      console.log(`Face verification: score=${score.toFixed(3)}, threshold=${threshold}, verified=${verified}`);
+    } else {
+      console.log('Face verification skipped: missing embedding or user face data');
     }
 
     const update = {
-      $setOnInsert: { sessionId: sess.sessionId, studentUid, method },
-      $set: { timestamp: new Date(), verified },
+      $setOnInsert: { sessionId: sess.sessionId, studentUid },
+      $set: { timestamp: new Date(), verified, method },
     };
 
     const result = await Attendance.findOneAndUpdate(
@@ -56,7 +59,8 @@ class SessionsService {
       update,
       { new: true, upsert: true }
     );
-    return { ok: true, verified, attendance: { sessionId: result.sessionId, studentUid: result.studentUid, timestamp: result.timestamp, method: result.method } };
+    console.log(`Attendance saved: sessionId=${result.sessionId}, studentUid=${result.studentUid}, verified=${result.verified}, method=${result.method}`);
+    return { ok: true, verified, attendance: { sessionId: result.sessionId, studentUid: result.studentUid, timestamp: result.timestamp, method: result.method, verified: result.verified } };
   }
 
   static async getProfessorSessions(authorization) {
