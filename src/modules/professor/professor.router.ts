@@ -14,6 +14,6 @@ router.post("/professor-assignment", authenticateToken, createProfessorAssignmen
 router.put("/professor-assignment/:id", authenticateToken, updateProfessorAssignment);
 router.delete("/professor-assignment/:id", authenticateToken, deleteProfessorAssignment);
 router.post("/generateQR", authenticateToken, generateSessionQR);
-router.get("/:professorId/offerings", authenticateToken, getProfessorCourseOfferings);
+router.get("/course-offerings", authenticateToken, getProfessorCourseOfferings);
 
 export default router;

@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
-import { CreateProfessorAssignment,
+import {
+  CreateProfessorAssignment,
   UpdateProfessorAssignment,
   DeleteProfessorAssignment,
   GenerateSessionQR,
-  GetProfessorCourseOfferings,
 } from "./professor.validation";
 import { ProfessorService } from "./professor.service";
 
@@ -61,15 +61,18 @@ export async function generateSessionQR(req: Request, res: Response) {
   }
 }
 
-
 // ========== GET PROFESSOR COURSE OFFERINGS ==========
 export async function getProfessorCourseOfferings(req: Request, res: Response) {
   try {
-    // Validate request params with Zod
-    const parsed = GetProfessorCourseOfferings.parse(req.params);
+    // Get professorId from JWT payload (injected by middleware)
+    const professorId = req.user?.id;
 
-    // Pass the validated object to the service
-    const offerings = await ProfessorService.getProfessorCourseOfferings(parsed);
+    if (!professorId) {
+      return res.status(401).json({ error: "Unauthorized: professorId not found in token" });
+    }
+
+    // Call the service with professorId
+    const offerings = await ProfessorService.getProfessorCourseOfferings({ professorId });
 
     res.json(offerings);
   } catch (error: any) {

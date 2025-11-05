@@ -1,0 +1,23 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+require("express-async-errors");
+const express_1 = __importDefault(require("express"));
+const helmet_1 = __importDefault(require("helmet"));
+const cors_1 = __importDefault(require("cors"));
+const compression_1 = __importDefault(require("compression"));
+const routes_1 = __importDefault(require("./routes"));
+const errorHandler_1 = require("./utils/errorHandler");
+const app = (0, express_1.default)();
+app.use((0, helmet_1.default)());
+app.use((0, cors_1.default)());
+app.use((0, compression_1.default)());
+app.use(express_1.default.json());
+app.use(express_1.default.urlencoded({ extended: true }));
+app.use('/iiitnr', routes_1.default);
+// central error handler
+app.use(errorHandler_1.errorHandler);
+exports.default = app;
+//# sourceMappingURL=app.js.map

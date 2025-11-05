@@ -26,6 +26,7 @@ export function authenticateToken(req: Request, res: Response, next: NextFunctio
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET!) as AuthPayload;
     req.user = payload;
+    console.log(payload);
     next();
   } catch (err) {
     console.log(err);
