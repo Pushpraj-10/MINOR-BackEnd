@@ -19,20 +19,35 @@ class SessionsService {
     const { title, durationMinutes = 30 } = body || {};
     const decoded = authzProfessor(authorization);
     const sessionId = 'sess_' + Date.now();
-    const qrToken = nanoid();
+    // qrSeed is a longer random value used to derive per-second rotating tokens via HMAC/time slices
+    const qrSeed = nanoid() + nanoid();
     const now = new Date();
     const expiresAt = new Date(now.getTime() + durationMinutes * 60 * 1000);
-    const doc = await Session.create({ sessionId, professorUid: decoded.uid, title: title || null, qrToken, createdAt: now, expiresAt });
-    return { sessionId: doc.sessionId, qrToken: doc.qrToken, expiresAt: doc.expiresAt };
+    const doc = await Session.create({ sessionId, professorUid: decoded.uid, title: title || null, qrSeed, createdAt: now, expiresAt });
+    return { sessionId: doc.sessionId, expiresAt: doc.expiresAt };
   }
 
   static async checkin(body) {
-    const { qrToken, studentUid, embedding } = body || {};
+    const { qrToken, studentUid, embedding, sessionId } = body || {};
     if (!qrToken) throw new Error('qrToken required');
     if (!studentUid) throw new Error('studentUid required');
-    const sess = await Session.findOne({ qrToken });
-    if (!sess) throw new Error('invalid qr');
+    // Accept either direct lookup (legacy) or derived rotating token validation
+    let sess = null;
+    if (sessionId) {
+      sess = await Session.findOne({ sessionId });
+    }
+    if (!sess) {
+      // fallback legacy static token flow
+      sess = await Session.findOne({ qrToken });
+    }
+    if (!sess) throw new Error('session not found');
     if (sess.expiresAt.getTime() < Date.now()) throw new Error('session expired');
+
+    // Validate rotating token if qrSeed exists
+    if (sess.qrSeed) {
+      const valid = isRotatingTokenValid(qrToken, sess.qrSeed, sess.sessionId);
+      if (!valid) throw new Error('invalid qr');
+    }
 
     // Face verification prototype
     const user = await User.findOne({ uid: studentUid });
@@ -148,6 +163,27 @@ function cosineSimilarity(a, b) {
   const denom = Math.sqrt(na) * Math.sqrt(nb) || 1;
   return dot / denom;
 }
+
+// Derive token: HMAC(secret = qrSeed + sessionId, message = unixSeconds)
+// Client obtains per-second token from QR code embedding {sessionId, token, ts}
+function deriveRotatingToken(qrSeed, sessionId, seconds) {
+  const crypto = require('crypto');
+  const h = crypto.createHmac('sha256', qrSeed + sessionId);
+  h.update(String(seconds));
+  // Shorten for QR compactness
+  return h.digest('base64').replace(/[^A-Za-z0-9]/g, '').slice(0, 16);
+}
+
+function isRotatingTokenValid(candidate, qrSeed, sessionId) {
+  const nowSec = Math.floor(Date.now() / 1000);
+  // Allow small clock skew window +/-1 second
+  for (let s = nowSec - 1; s <= nowSec + 1; s++) {
+    if (deriveRotatingToken(qrSeed, sessionId, s) === candidate) return true;
+  }
+  return false;
+}
+
+module.exports.deriveRotatingToken = deriveRotatingToken;
 
 module.exports = SessionsService;
 

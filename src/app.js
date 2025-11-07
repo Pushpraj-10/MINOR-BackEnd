@@ -4,12 +4,15 @@ const morgan = require('morgan');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
+const http = require('http');
 require('dotenv').config();
 
 const { connectToDatabase } = require('./config/db');
 const apiRouter = require('./router');
+const { initRealtime } = require('./realtime');
 
 const app = express();
+const server = http.createServer(app);
 
 // Security & Middleware
 app.use(helmet());
@@ -35,7 +38,10 @@ const PORT = process.env.PORT || 3000;
 
 connectToDatabase()
   .then(() => {
-    app.listen(PORT, () => {
+    // Initialize Socket.IO and real-time namespaces
+    initRealtime(server);
+
+    server.listen(PORT, () => {
       console.log('Server listening on port ' + PORT);
     });
   })

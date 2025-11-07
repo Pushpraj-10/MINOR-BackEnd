@@ -4,7 +4,10 @@ const SessionSchema = new mongoose.Schema({
   sessionId: { type: String, required: true, unique: true },
   professorUid: { type: String, required: true },
   title: { type: String },
-  qrToken: { type: String, required: true, unique: true },
+  // Rotating QR seed used to derive per-second tokens (server-side only)
+  qrSeed: { type: String, required: true },
+  // Legacy static token (optional, maintained for backward compatibility)
+  qrToken: { type: String },
   createdAt: { type: Date, required: true, default: () => new Date() },
   expiresAt: { type: Date, required: true },
   meta: { type: Object, default: null },
