@@ -45,7 +45,7 @@ class SessionsService {
 
     // Validate rotating token if qrSeed exists
     if (sess.qrSeed) {
-      const valid = isRotatingTokenValid(qrToken, sess.qrSeed, sess.sessionId);
+      const valid = this.isRotatingTokenValid(qrToken, sess.qrSeed, sess.sessionId);
       if (!valid) throw new Error('invalid qr');
     }
 
@@ -148,6 +148,23 @@ class SessionsService {
       students: studentsWithAttendance
     };
   }
+
+  static deriveRotatingToken(qrSeed, sessionId, seconds) {
+    const crypto = require('crypto');
+    const h = crypto.createHmac('sha256', qrSeed + sessionId);
+    h.update(String(seconds));
+    // Shorten for QR compactness
+    return h.digest('base64').replace(/[^A-Za-z0-9]/g, '').slice(0, 16);
+  }
+
+  static isRotatingTokenValid(candidate, qrSeed, sessionId) {
+    const nowSec = Math.floor(Date.now() / 1000);
+    // Allow small clock skew window +/-1 second
+    for (let s = nowSec - 1; s <= nowSec + 1; s++) {
+      if (SessionsService.deriveRotatingToken(qrSeed, sessionId, s) === candidate) return true;
+    }
+    return false;
+  }
 }
 
 function cosineSimilarity(a, b) {
@@ -164,24 +181,4 @@ function cosineSimilarity(a, b) {
   return dot / denom;
 }
 
-// Derive token: HMAC(secret = qrSeed + sessionId, message = unixSeconds)
-// Client obtains per-second token from QR code embedding {sessionId, token, ts}
-function deriveRotatingToken(qrSeed, sessionId, seconds) {
-  const crypto = require('crypto');
-  const h = crypto.createHmac('sha256', qrSeed + sessionId);
-  h.update(String(seconds));
-  // Shorten for QR compactness
-  return h.digest('base64').replace(/[^A-Za-z0-9]/g, '').slice(0, 16);
-}
-
-function isRotatingTokenValid(candidate, qrSeed, sessionId) {
-  const nowSec = Math.floor(Date.now() / 1000);
-  // Allow small clock skew window +/-1 second
-  for (let s = nowSec - 1; s <= nowSec + 1; s++) {
-    if (deriveRotatingToken(qrSeed, sessionId, s) === candidate) return true;
-  }
-  return false;
-}
-
-module.exports.deriveRotatingToken = deriveRotatingToken;
 module.exports = SessionsService;
