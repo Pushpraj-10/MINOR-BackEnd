@@ -21,6 +21,11 @@ app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 app.use(morgan('dev'));
 
+// Root health for Render
+app.get('/', (_req, res) => {
+  res.status(200).json({ status: 'ok', service: 'minor-backend', basePath: '/api' });
+});
+
 // Basic rate limit for critical endpoints
 const authLimiter = rateLimit({ windowMs: 60 * 1000, max: 30 });
 app.use('/api/auth', authLimiter);
