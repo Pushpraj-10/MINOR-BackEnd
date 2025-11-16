@@ -20,6 +20,7 @@ app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 app.use(morgan('dev'));
+app.set('trust proxy', 1);
 
 // Root health for Render
 app.get('/', (_req, res) => {
