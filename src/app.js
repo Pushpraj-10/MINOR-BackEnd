@@ -26,16 +26,11 @@ app.get('/', (_req, res) => {
   res.status(200).json({ status: 'ok', service: 'minor-backend', basePath: '/api' });
 });
 
-// Basic rate limit for critical endpoints
-const authLimiter = rateLimit({ windowMs: 60 * 1000, max: 30 });
-app.use('/api/auth', authLimiter);
-app.use('/api/sessions/checkin', rateLimit({ windowMs: 60 * 1000, max: 60 }));
-
 // Routes
 app.use('/api', apiRouter);
 
 // Health (under basePath /api)
-app.get('/api/', (req, res) => {
+app.get('/api/env', (req, res) => {
   res.json({ status: 'ok', env: process.env.NODE_ENV || 'development' });
 });
 
