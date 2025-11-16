@@ -184,7 +184,4 @@ function isRotatingTokenValid(candidate, qrSeed, sessionId) {
 }
 
 module.exports.deriveRotatingToken = deriveRotatingToken;
-
 module.exports = SessionsService;
-
-

@@ -25,8 +25,9 @@ function initRealtime(server) {
     const sess = await Session.findOne({ sessionId });
     if (!sess) return;
     const interval = setInterval(() => {
-      const nowSec = Math.floor(Date.now() / 1000);
-      if (sess.expiresAt.getTime() < Date.now()) {
+      const now = Date.now();
+      const nowSec = Math.floor(now / 1000);
+      if (sess.expiresAt.getTime() <= now) {
         clearInterval(interval);
         broadcasters.delete(sessionId);
         sessionsNs.to(sessionId).emit('session:ended', { sessionId });
@@ -39,21 +40,38 @@ function initRealtime(server) {
     broadcasters.set(sessionId, interval);
   }
 
+  function maybeStopBroadcast(sessionId) {
+    const size = sessionsNs.adapter.rooms.get(sessionId)?.size || 0;
+    if (size === 0) {
+      const t = broadcasters.get(sessionId);
+      if (t) {
+        clearInterval(t);
+        broadcasters.delete(sessionId);
+      }
+    }
+  }
+
   sessionsNs.on('connection', (socket) => {
     // Minimal identification could be added (auth) if needed
-    socket.on('professor:join', async ({ sessionId }) => {
-      socket.join(sessionId);
+    socket.on('professor:join', async (payload = {}) => {
+      const sessionId = payload.sessionId;
+      if (!sessionId) return;
+      await socket.join(sessionId);
       await startBroadcast(sessionId);
       socket.emit('professor:joined', { sessionId });
     });
 
-    socket.on('student:subscribe', async ({ sessionId }) => {
-      socket.join(sessionId);
+    socket.on('student:subscribe', async (payload = {}) => {
+      const sessionId = payload.sessionId;
+      if (!sessionId) return;
+      await socket.join(sessionId);
       socket.emit('student:subscribed', { sessionId });
     });
 
-    socket.on('disconnect', () => {
-      // No per-socket cleanup needed; interval cleaned when session expires
+    socket.on('disconnecting', () => {
+      for (const room of socket.rooms) {
+        if (room !== socket.id) maybeStopBroadcast(room);
+      }
     });
   });
 
