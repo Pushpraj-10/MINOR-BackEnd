@@ -1,0 +1,22 @@
+# Render blueprint for backend service
+# Fixes Render error: "No render.yaml found on master branch."
+# See https://render.com/docs/blueprint-spec for full spec
+
+services:
+  - type: web
+    name: minor-backend
+    env: node
+    plan: free
+    # This file lives inside the backend folder, so root is "."
+    rootDir: .
+    buildCommand: npm install
+    startCommand: npm start
+    autoDeploy: true
+    healthCheckPath: /api
+    envVars:
+      - key: NODE_VERSION
+        value: 18
+      - key: MONGODB_URI
+        sync: false # set in Render dashboard
+      - key: JWT_SECRET
+        sync: false # set in Render dashboard
